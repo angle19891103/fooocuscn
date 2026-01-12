@@ -1,11 +1,19 @@
 import threading
+from deep_translator import GoogleTranslator
 
 from extras.inpaint_mask import generate_mask_from_image, SAMOptions
 from modules.patch import PatchSettings, patch_settings, patch_all
 import modules.config
 
 patch_all()
-
+def translate_to_en(text):
+    if text and any('\u4e00' <= char <= '\u9fff' for char in text):
+        try:
+            # 自动检测源语言并翻译为英文
+            return GoogleTranslator(source='auto', target='en').translate(text)
+        except Exception as e:
+            print(f"翻译出错: {e}")
+    return text
 
 class AsyncTask:
     def __init__(self, args):
@@ -27,8 +35,18 @@ class AsyncTask:
 
         args.reverse()
         self.generate_image_grid = args.pop()
-        self.prompt = args.pop()
-        self.negative_prompt = args.pop()
+        #self.prompt = args.pop()
+        #self.negative_prompt = args.pop()
+        raw_prompt = args.pop()
+        raw_negative_prompt = args.pop()
+
+        # 执行翻译
+        self.prompt = translate_to_en(raw_prompt)
+        self.negative_prompt = translate_to_en(raw_negative_prompt)
+
+        # 可选：在后台打印一下翻译结果，方便调试
+        if raw_prompt != self.prompt:
+            print(f"[Fooocus翻译] 正向提示词: {raw_prompt} -> {self.prompt}")
         self.style_selections = args.pop()
 
         self.performance_selection = Performance(args.pop())
@@ -53,7 +71,9 @@ class AsyncTask:
         self.uov_input_image = args.pop()
         self.outpaint_selections = args.pop()
         self.inpaint_input_image = args.pop()
-        self.inpaint_additional_prompt = args.pop()
+        #self.inpaint_additional_prompt = args.pop()
+        self.inpaint_additional_prompt = translate_to_en(args.pop())
+
         self.inpaint_mask_image_upload = args.pop()
 
         self.disable_preview = args.pop()
